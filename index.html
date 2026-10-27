@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Porsche | Dashboard de Vendas</title>
+
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- ====================== ESTILOS CSS ====================== -->
+  <style>
+    :root {
+      --bg: #111111;
+      --surface: #1a1a1a;
+      --surface-2: #222222;
+      --border: #2e2e2e;
+      --text: #ffffff;
+      --muted: #9a9a9a;
+      --red: #D5001C;
+      --gold: #C9A961;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+
+    /* ---------- Cabeçalho ---------- */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #161616 0%, var(--bg) 100%);
+      padding: 28px 0 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand-bar { width: 4px; height: 44px; background: var(--red); }
+    .brand h1 {
+      font-size: 1.6rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    }
+    .brand p { color: var(--muted); font-size: 0.85rem; font-weight: 300; letter-spacing: 0.04em; }
+
+    /* ---------- Filtros ---------- */
+    .filters {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(17, 17, 17, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+    }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr) auto;
+      gap: 14px;
+      align-items: end;
+    }
+    .field label {
+      display: block; font-size: 0.68rem; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--muted); margin-bottom: 6px;
+    }
+    .field select {
+      width: 100%; background: var(--surface); color: var(--text);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 10px 12px; font-family: inherit; font-size: 0.9rem; cursor: pointer;
+      transition: border-color .2s;
+    }
+    .field select:hover, .field select:focus { border-color: var(--red); outline: none; }
+
+    .btn-clear {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--red); border-radius: 4px;
+      padding: 10px 22px; font-family: inherit; font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+      cursor: pointer; transition: background .2s;
+    }
+    .btn-clear:hover { background: var(--red); }
+
+    /* ---------- KPIs ---------- */
+    main { padding: 28px 0 48px; }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 22px;
+    }
+    .kpi {
+      background: var(--surface); border: 1px solid var(--border);
+      border-top: 2px solid var(--red); border-radius: 4px; padding: 20px 22px;
+    }
+    .kpi-label {
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
+    }
+    .kpi-value { font-size: 1.75rem; font-weight: 600; margin-top: 8px; letter-spacing: -0.01em; }
+    .kpi-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    /* ---------- Cards de gráfico ---------- */
+    .charts-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 20px 22px;
+    }
+    .card h2 { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.03em; }
+    .card .question {
+      font-size: 0.78rem; color: var(--muted); font-weight: 300; margin: 2px 0 14px;
+    }
+    .chart-box { position: relative; height: 300px; }
+    .span-12 { grid-column: span 12; }
+    .span-8  { grid-column: span 8; }
+    .span-7  { grid-column: span 7; }
+    .span-6  { grid-column: span 6; }
+    .span-5  { grid-column: span 5; }
+    .span-4  { grid-column: span 4; }
+
+    /* ---------- Insights ---------- */
+    .insight {
+      margin-top: 14px; padding: 12px 14px; font-size: 0.85rem;
+      background: var(--surface-2); border-left: 3px solid var(--gold); border-radius: 2px;
+      color: #dcdcdc;
+    }
+    .insight strong { color: var(--text); }
+
+    /* ---------- Tabela regional ---------- */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th {
+      text-align: left; font-size: 0.66rem; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--muted); font-weight: 500;
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    td { padding: 10px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 0.72rem; border: 1px solid var(--gold); color: var(--gold);
+    }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .empty-msg {
+      display: none; text-align: center; padding: 48px 0; color: var(--muted);
+    }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 20px 0;
+      text-align: center; color: var(--muted); font-size: 0.75rem;
+    }
+
+    /* ---------- Responsividade ---------- */
+    @media (max-width: 1000px) {
+      .filters-grid { grid-template-columns: repeat(2, 1fr); }
+      .btn-clear { grid-column: span 2; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; }
+      .filters { position: static; }
+    }
+    @media (max-width: 560px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .filters-grid { grid-template-columns: 1fr; }
+      .btn-clear { grid-column: span 1; }
+      .kpi-value { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ====================== ESTRUTURA HTML ====================== -->
+  <header>
+    <div class="container brand">
+      <div class="brand-bar"></div>
+      <div>
+        <h1>Porsche</h1>
+        <p>Dashboard de Vendas · Análise de faturamento, regiões e ano do veículo</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filtros globais -->
+  <section class="filters" aria-label="Filtros globais">
+    <div class="container filters-grid">
+      <div class="field">
+        <label for="f-modelo">Modelo</label>
+        <select id="f-modelo"></select>
+      </div>
+      <div class="field">
+        <label for="f-estado">Estado</label>
+        <select id="f-estado"></select>
+      </div>
+      <div class="field">
+        <label for="f-ano">Ano</label>
+        <select id="f-ano"></select>
+      </div>
+      <div class="field">
+        <label for="f-pagamento">Método de Pagamento</label>
+        <select id="f-pagamento"></select>
+      </div>
+      <button class="btn-clear" id="btn-clear" type="button">Limpar Filtros</button>
+    </div>
+  </section>
+
+  <main class="container">
+    <!-- KPIs -->
+    <section class="kpi-grid" aria-label="Indicadores principais">
+      <article class="kpi">
+        <div class="kpi-label">Faturamento Total</div>
+        <div class="kpi-value" id="kpi-faturamento">—</div>
+        <div class="kpi-sub">Soma das vendas filtradas</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-label">Veículos Vendidos</div>
+        <div class="kpi-value" id="kpi-qtd">—</div>
+        <div class="kpi-sub">Unidades</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-label">Ticket Médio Global</div>
+        <div class="kpi-value" id="kpi-ticket">—</div>
+        <div class="kpi-sub">Faturamento ÷ unidades</div>
+      </article>
+      <article class="kpi">
+        <div class="kpi-label">Modelo Mais Vendido</div>
+        <div class="kpi-value" id="kpi-top-modelo">—</div>
+        <div class="kpi-sub" id="kpi-top-modelo-qtd">—</div>
+      </article>
+    </section>
+
+    <div class="empty-msg" id="empty-msg">
+      Nenhuma venda encontrada para a combinação de filtros selecionada.
+    </div>
+
+    <!-- Gráficos -->
+    <section class="charts-grid" id="charts-area">
+
+      <!-- Pergunta 1 -->
+      <article class="card span-7">
+        <h2>Faturamento Total por Modelo</h2>
+        <p class="question">Qual modelo gera o maior faturamento?</p>
+        <div class="chart-box"><canvas id="chart-faturamento"></canvas></div>
+      </article>
+
+      <article class="card span-5">
+        <h2>Ticket Médio por Modelo</h2>
+        <p class="question">Qual modelo apresenta o maior ticket médio?</p>
+        <div class="chart-box"><canvas id="chart-ticket"></canvas></div>
+      </article>
+
+      <div class="span-12">
+        <div class="insight" id="insight-1"></div>
+      </div>
+
+      <!-- Pergunta 2 -->
+      <article class="card span-4">
+        <h2>Participação por Método de Pagamento</h2>
+        <p class="question">Como os clientes pagam?</p>
+        <div class="chart-box"><canvas id="chart-pagamento"></canvas></div>
+      </article>
+
+      <article class="card span-8">
+        <h2>Vendas por Estado e Método de Pagamento</h2>
+        <p class="question">Como as vendas se distribuem por Estado e qual o método preferido em cada região?</p>
+        <div class="chart-box"><canvas id="chart-estado"></canvas></div>
+      </article>
+
+      <article class="card span-12">
+        <h2>Resumo Regional</h2>
+        <p class="question">Método de pagamento preferido em cada Estado</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Estado</th>
+              <th class="num">Veículos</th>
+              <th class="num">Faturamento</th>
+              <th class="num">Ticket Médio</th>
+              <th>Método Preferido</th>
+              <th class="num">Participação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-estados"></tbody>
+        </table>
+        <div class="insight" id="insight-2"></div>
+      </article>
+
+      <!-- Pergunta 3 -->
+      <article class="card span-12">
+        <h2>Volume de Vendas e Preço Médio por Ano do Veículo</h2>
+        <p class="question">Como o ano do modelo impacta o volume de vendas e o preço praticado?</p>
+        <div class="chart-box"><canvas id="chart-ano"></canvas></div>
+        <div class="insight" id="insight-3"></div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    Dados simulados para fins demonstrativos · Não afiliado à Porsche AG
+  </footer>
+
+  <script>
+    /* ====================== DATASET JSON (100 vendas simuladas) ====================== */
+    const VENDAS = [
+      {id:1,modelo:"911 Carrera",cidade:"São Paulo",estado:"SP",ano:2023,preco:1480000,metodoPagamento:"À Vista"},
+      {id:2,modelo:"Macan",cidade:"Florianópolis",estado:"SC",ano:2024,preco:685000,metodoPagamento:"Financiamento Bancário"},
+      {id:3,modelo:"Cayenne",cidade:"Campinas",estado:"SP",ano:2022,preco:810000,metodoPagamento:"Consórcio"},
+      {id:4,modelo:"Panamera",cidade:"Rio de Janeiro",estado:"RJ",ano:2023,preco:1040000,metodoPagamento:"À Vista"},
+      {id:5,modelo:"Taycan",cidade:"Balneário Camboriú",estado:"SC",ano:2024,preco:1090000,metodoPagamento:"Leasing"},
+      {id:6,modelo:"718 Boxster",cidade:"Curitiba",estado:"PR",ano:2022,preco:625000,metodoPagamento:"Financiamento Bancário"},
+      {id:7,modelo:"Macan",cidade:"Belo Horizonte",estado:"MG",ano:2021,preco:485000,metodoPagamento:"Consórcio"},
+      {id:8,modelo:"911 Carrera",cidade:"São Paulo",estado:"SP",ano:2024,preco:1690000,metodoPagamento:"À Vista"},
+      {id:9,modelo:"Cayenne",cidade:"Joinville",estado:"SC",ano:2023,preco:915000,metodoPagamento:"Financiamento Bancário"},
+      {id:10,modelo:"Taycan",cidade:"Niterói",estado:"RJ",ano:2022,preco:840000,metodoPagamento:"Leasing"},
+      {id:11,modelo:"Panamera",cidade:"Ribeirão Preto",estado:"SP",ano:2021,preco:850000,metodoPagamento:"À Vista"},
+      {id:12,modelo:"718 Boxster",cidade:"Santos",estado:"SP",ano:2023,preco:695000,metodoPagamento:"Leasing"},
+      {id:13,modelo:"Macan",cidade:"Londrina",estado:"PR",ano:2022,preco:535000,metodoPagamento:"Financiamento Bancário"},
+      {id:14,modelo:"911 Carrera",cidade:"Rio de Janeiro",estado:"RJ",ano:2022,preco:1320000,metodoPagamento:"À Vista"},
+      {id:15,modelo:"Cayenne",cidade:"Uberlândia",estado:"MG",ano:2024,preco:1050000,metodoPagamento:"Financiamento Bancário"},
+      {id:16,modelo:"Taycan",cidade:"São Paulo",estado:"SP",ano:2023,preco:940000,metodoPagamento:"Leasing"},
+      {id:17,modelo:"Macan",cidade:"Blumenau",estado:"SC",ano:2023,preco:598000,metodoPagamento:"Consórcio"},
+      {id:18,modelo:"Panamera",cidade:"Curitiba",estado:"PR",ano:2024,preco:1180000,metodoPagamento:"À Vista"},
+      {id:19,modelo:"718 Boxster",cidade:"Florianópolis",estado:"SC",ano:2021,preco:560000,metodoPagamento:"Consórcio"},
+      {id:20,modelo:"911 Carrera",cidade:"Belo Horizonte",estado:"MG",ano:2023,preco:1510000,metodoPagamento:"Financiamento Bancário"},
+      {id:21,modelo:"Cayenne",cidade:"Campinas",estado:"SP",ano:2021,preco:725000,metodoPagamento:"Consórcio"},
+      {id:22,modelo:"Macan",cidade:"São Paulo",estado:"SP",ano:2024,preco:702000,metodoPagamento:"À Vista"},
+      {id:23,modelo:"Taycan",cidade:"Florianópolis",estado:"SC",ano:2021,preco:765000,metodoPagamento:"Leasing"},
+      {id:24,modelo:"Panamera",cidade:"Rio de Janeiro",estado:"RJ",ano:2022,preco:925000,metodoPagamento:"Financiamento Bancário"},
+      {id:25,modelo:"718 Boxster",cidade:"Curitiba",estado:"PR",ano:2024,preco:785000,metodoPagamento:"À Vista"},
+      {id:26,modelo:"911 Carrera",cidade:"Balneário Camboriú",estado:"SC",ano:2024,preco:1720000,metodoPagamento:"À Vista"},
+      {id:27,modelo:"Macan",cidade:"Niterói",estado:"RJ",ano:2023,preco:612000,metodoPagamento:"Financiamento Bancário"},
+      {id:28,modelo:"Cayenne",cidade:"Londrina",estado:"PR",ano:2022,preco:790000,metodoPagamento:"Consórcio"},
+      {id:29,modelo:"Taycan",cidade:"Belo Horizonte",estado:"MG",ano:2024,preco:1120000,metodoPagamento:"Leasing"},
+      {id:30,modelo:"Panamera",cidade:"São Paulo",estado:"SP",ano:2023,preco:1075000,metodoPagamento:"À Vista"},
+      {id:31,modelo:"718 Boxster",cidade:"Campinas",estado:"SP",ano:2022,preco:640000,metodoPagamento:"Financiamento Bancário"},
+      {id:32,modelo:"911 Carrera",cidade:"Ribeirão Preto",estado:"SP",ano:2021,preco:1210000,metodoPagamento:"Consórcio"},
+      {id:33,modelo:"Macan",cidade:"Joinville",estado:"SC",ano:2024,preco:668000,metodoPagamento:"Financiamento Bancário"},
+      {id:34,modelo:"Cayenne",cidade:"Rio de Janeiro",estado:"RJ",ano:2023,preco:940000,metodoPagamento:"À Vista"},
+      {id:35,modelo:"Taycan",cidade:"Curitiba",estado:"PR",ano:2022,preco:815000,metodoPagamento:"Leasing"},
+      {id:36,modelo:"Panamera",cidade:"Uberlândia",estado:"MG",ano:2021,preco:830000,metodoPagamento:"Financiamento Bancário"},
+      {id:37,modelo:"718 Boxster",cidade:"Blumenau",estado:"SC",ano:2023,preco:710000,metodoPagamento:"Consórcio"},
+      {id:38,modelo:"Macan",cidade:"Santos",estado:"SP",ano:2022,preco:548000,metodoPagamento:"À Vista"},
+      {id:39,modelo:"911 Carrera",cidade:"Niterói",estado:"RJ",ano:2024,preco:1650000,metodoPagamento:"Financiamento Bancário"},
+      {id:40,modelo:"Cayenne",cidade:"Florianópolis",estado:"SC",ano:2021,preco:755000,metodoPagamento:"Financiamento Bancário"},
+      {id:41,modelo:"Taycan",cidade:"Campinas",estado:"SP",ano:2023,preco:905000,metodoPagamento:"À Vista"},
+      {id:42,modelo:"Panamera",cidade:"Balneário Camboriú",estado:"SC",ano:2022,preco:960000,metodoPagamento:"Leasing"},
+      {id:43,modelo:"718 Boxster",cidade:"Belo Horizonte",estado:"MG",ano:2024,preco:765000,metodoPagamento:"Financiamento Bancário"},
+      {id:44,modelo:"Macan",cidade:"Curitiba",estado:"PR",ano:2021,preco:470000,metodoPagamento:"Consórcio"},
+      {id:45,modelo:"911 Carrera",cidade:"São Paulo",estado:"SP",ano:2022,preco:1350000,metodoPagamento:"À Vista"},
+      {id:46,modelo:"Cayenne",cidade:"São Paulo",estado:"SP",ano:2024,preco:1085000,metodoPagamento:"À Vista"},
+      {id:47,modelo:"Taycan",cidade:"Rio de Janeiro",estado:"RJ",ano:2024,preco:1135000,metodoPagamento:"Leasing"},
+      {id:48,modelo:"Panamera",cidade:"Londrina",estado:"PR",ano:2023,preco:1010000,metodoPagamento:"Financiamento Bancário"},
+      {id:49,modelo:"718 Boxster",cidade:"Rio de Janeiro",estado:"RJ",ano:2021,preco:575000,metodoPagamento:"À Vista"},
+      {id:50,modelo:"Macan",cidade:"Florianópolis",estado:"SC",ano:2022,preco:560000,metodoPagamento:"Financiamento Bancário"},
+      {id:51,modelo:"911 Carrera",cidade:"Joinville",estado:"SC",ano:2021,preco:1190000,metodoPagamento:"Consórcio"},
+      {id:52,modelo:"Cayenne",cidade:"Belo Horizonte",estado:"MG",ano:2022,preco:825000,metodoPagamento:"Financiamento Bancário"},
+      {id:53,modelo:"Taycan",cidade:"Ribeirão Preto",estado:"SP",ano:2021,preco:740000,metodoPagamento:"Leasing"},
+      {id:54,modelo:"Panamera",cidade:"Campinas",estado:"SP",ano:2024,preco:1230000,metodoPagamento:"À Vista"},
+      {id:55,modelo:"718 Boxster",cidade:"Balneário Camboriú",estado:"SC",ano:2022,preco:655000,metodoPagamento:"À Vista"},
+      {id:56,modelo:"Macan",cidade:"Uberlândia",estado:"MG",ano:2024,preco:655000,metodoPagamento:"Financiamento Bancário"},
+      {id:57,modelo:"911 Carrera",cidade:"Curitiba",estado:"PR",ano:2023,preco:1470000,metodoPagamento:"Financiamento Bancário"},
+      {id:58,modelo:"Cayenne",cidade:"Blumenau",estado:"SC",ano:2022,preco:770000,metodoPagamento:"Consórcio"},
+      {id:59,modelo:"Taycan",cidade:"Joinville",estado:"SC",ano:2023,preco:885000,metodoPagamento:"Financiamento Bancário"},
+      {id:60,modelo:"Panamera",cidade:"Niterói",estado:"RJ",ano:2021,preco:810000,metodoPagamento:"Leasing"},
+      {id:61,modelo:"718 Boxster",cidade:"São Paulo",estado:"SP",ano:2024,preco:805000,metodoPagamento:"À Vista"},
+      {id:62,modelo:"Macan",cidade:"Ribeirão Preto",estado:"SP",ano:2023,preco:625000,metodoPagamento:"Consórcio"},
+      {id:63,modelo:"911 Carrera",cidade:"Uberlândia",estado:"MG",ano:2022,preco:1290000,metodoPagamento:"À Vista"},
+      {id:64,modelo:"Cayenne",cidade:"Curitiba",estado:"PR",ano:2023,preco:895000,metodoPagamento:"Financiamento Bancário"},
+      {id:65,modelo:"Taycan",cidade:"Rio de Janeiro",estado:"RJ",ano:2021,preco:790000,metodoPagamento:"À Vista"},
+      {id:66,modelo:"Panamera",cidade:"Florianópolis",estado:"SC",ano:2024,preco:1195000,metodoPagamento:"Financiamento Bancário"},
+      {id:67,modelo:"718 Boxster",cidade:"Londrina",estado:"PR",ano:2021,preco:530000,metodoPagamento:"Consórcio"},
+      {id:68,modelo:"Macan",cidade:"Balneário Camboriú",estado:"SC",ano:2024,preco:715000,metodoPagamento:"À Vista"},
+      {id:69,modelo:"911 Carrera",cidade:"Campinas",estado:"SP",ano:2023,preco:1535000,metodoPagamento:"Leasing"},
+      {id:70,modelo:"Cayenne",cidade:"Santos",estado:"SP",ano:2021,preco:700000,metodoPagamento:"Financiamento Bancário"},
+      {id:71,modelo:"Taycan",cidade:"Curitiba",estado:"PR",ano:2024,preco:1060000,metodoPagamento:"Financiamento Bancário"},
+      {id:72,modelo:"Panamera",cidade:"São Paulo",estado:"SP",ano:2022,preco:940000,metodoPagamento:"À Vista"},
+      {id:73,modelo:"718 Boxster",cidade:"Joinville",estado:"SC",ano:2024,preco:750000,metodoPagamento:"Consórcio"},
+      {id:74,modelo:"Macan",cidade:"Rio de Janeiro",estado:"RJ",ano:2021,preco:495000,metodoPagamento:"Financiamento Bancário"},
+      {id:75,modelo:"911 Carrera",cidade:"Florianópolis",estado:"SC",ano:2022,preco:1380000,metodoPagamento:"À Vista"},
+      {id:76,modelo:"Cayenne",cidade:"Niterói",estado:"RJ",ano:2024,preco:1020000,metodoPagamento:"Leasing"},
+      {id:77,modelo:"Taycan",cidade:"Uberlândia",estado:"MG",ano:2022,preco:800000,metodoPagamento:"Leasing"},
+      {id:78,modelo:"Panamera",cidade:"Curitiba",estado:"PR",ano:2021,preco:870000,metodoPagamento:"Consórcio"},
+      {id:79,modelo:"718 Boxster",cidade:"Belo Horizonte",estado:"MG",ano:2023,preco:680000,metodoPagamento:"Financiamento Bancário"},
+      {id:80,modelo:"Macan",cidade:"Campinas",estado:"SP",ano:2024,preco:695000,metodoPagamento:"Financiamento Bancário"},
+      {id:81,modelo:"911 Carrera",cidade:"Santos",estado:"SP",ano:2024,preco:1610000,metodoPagamento:"À Vista"},
+      {id:82,modelo:"Cayenne",cidade:"Balneário Camboriú",estado:"SC",ano:2023,preco:965000,metodoPagamento:"À Vista"},
+      {id:83,modelo:"Taycan",cidade:"Blumenau",estado:"SC",ano:2022,preco:855000,metodoPagamento:"Consórcio"},
+      {id:84,modelo:"Panamera",cidade:"Belo Horizonte",estado:"MG",ano:2024,preco:1160000,metodoPagamento:"Leasing"},
+      {id:85,modelo:"718 Boxster",cidade:"Niterói",estado:"RJ",ano:2022,preco:610000,metodoPagamento:"Financiamento Bancário"},
+      {id:86,modelo:"Macan",cidade:"Joinville",estado:"SC",ano:2021,preco:505000,metodoPagamento:"Consórcio"},
+      {id:87,modelo:"911 Carrera",cidade:"Londrina",estado:"PR",ano:2024,preco:1580000,metodoPagamento:"Financiamento Bancário"},
+      {id:88,modelo:"Cayenne",cidade:"Ribeirão Preto",estado:"SP",ano:2023,preco:870000,metodoPagamento:"Leasing"},
+      {id:89,modelo:"Taycan",cidade:"Santos",estado:"SP",ano:2024,preco:1010000,metodoPagamento:"À Vista"},
+      {id:90,modelo:"Panamera",cidade:"Joinville",estado:"SC",ano:2023,preco:995000,metodoPagamento:"Financiamento Bancário"},
+      {id:91,modelo:"718 Boxster",cidade:"Ribeirão Preto",estado:"SP",ano:2021,preco:545000,metodoPagamento:"À Vista"},
+      {id:92,modelo:"Macan",cidade:"Curitiba",estado:"PR",ano:2023,preco:585000,metodoPagamento:"Financiamento Bancário"},
+      {id:93,modelo:"911 Carrera",cidade:"Rio de Janeiro",estado:"RJ",ano:2021,preco:1240000,metodoPagamento:"Consórcio"},
+      {id:94,modelo:"Cayenne",cidade:"Florianópolis",estado:"SC",ano:2024,preco:1075000,metodoPagamento:"Financiamento Bancário"},
+      {id:95,modelo:"Taycan",cidade:"Niterói",estado:"RJ",ano:2023,preco:925000,metodoPagamento:"À Vista"},
+      {id:96,modelo:"Panamera",cidade:"Campinas",estado:"SP",ano:2021,preco:880000,metodoPagamento:"Financiamento Bancário"},
+      {id:97,modelo:"718 Boxster",cidade:"Florianópolis",estado:"SC",ano:2023,preco:725000,metodoPagamento:"Leasing"},
+      {id:98,modelo:"Macan",cidade:"Belo Horizonte",estado:"MG",ano:2022,preco:575000,metodoPagamento:"À Vista"},
+      {id:99,modelo:"911 Carrera",cidade:"Blumenau",estado:"SC",ano:2023,preco:1495000,metodoPagamento:"Financiamento Bancário"},
+      {id:100,modelo:"Cayenne",cidade:"Curitiba",estado:"PR",ano:2021,preco:690000,metodoPagamento:"À Vista"}
+    ];
+
+    /* ====================== CONSTANTES E FORMATADORES ====================== */
+    const COLORS = {
+      red: '#D5001C',
+      gold: '#C9A961',
+      white: '#FFFFFF',
+      grey: '#8a8a8a',
+      graphite: '#3a3a3a'
+    };
+
+    const PAYMENT_COLORS = {
+      'À Vista': COLORS.red,
+      'Financiamento Bancário': COLORS.white,
+      'Consórcio': COLORS.gold,
+      'Leasing': COLORS.grey
+    };
+
+    const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    const brlCompact = new Intl.NumberFormat('pt-BR', {
+      style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1
+    });
+    const int = new Intl.NumberFormat('pt-BR');
+    const pct = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 1 });
+
+    const MODELOS    = [...new Set(VENDAS.map(v => v.modelo))].sort();
+    const ESTADOS    = [...new Set(VENDAS.map(v => v.estado))].sort();
+    const ANOS       = [...new Set(VENDAS.map(v => v.ano))].sort();
+    const PAGAMENTOS = ['À Vista', 'Financiamento Bancário', 'Consórcio', 'Leasing'];
+
+    /* ====================== LÓGICA DE FILTROS ====================== */
+    const filtros = { modelo: '', estado: '', ano: '', pagamento: '' };
+
+    const els = {
+      modelo:    document.getElementById('f-modelo'),
+      estado:    document.getElementById('f-estado'),
+      ano:       document.getElementById('f-ano'),
+      pagamento: document.getElementById('f-pagamento')
+    };
+
+    function preencherSelect(select, rotulo, valores) {
+      select.innerHTML = `<option value="">${rotulo}</option>` +
+        valores.map(v => `<option value="${v}">${v}</option>`).join('');
+    }
+
+    preencherSelect(els.modelo, 'Todos os modelos', MODELOS);
+    preencherSelect(els.estado, 'Todos os estados', ESTADOS);
+    preencherSelect(els.ano, 'Todos os anos', ANOS);
+    preencherSelect(els.pagamento, 'Todos os métodos', PAGAMENTOS);
+
+    Object.keys(els).forEach(chave => {
+      els[chave].addEventListener('change', e => {
+        filtros[chave] = e.target.value;
+        atualizarDashboard();
+      });
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      Object.keys(filtros).forEach(k => { filtros[k] = ''; els[k].value = ''; });
+      atualizarDashboard();
+    });
+
+    function filtrarVendas() {
+      return VENDAS.filter(v =>
+        (!filtros.modelo    || v.modelo === filtros.modelo) &&
+        (!filtros.estado    || v.estado === filtros.estado) &&
+        (!filtros.ano       || String(v.ano) === filtros.ano) &&
+        (!filtros.pagamento || v.metodoPagamento === filtros.pagamento)
+      );
+    }
+
+    /* ---------- Funções de agregação ---------- */
+    function agrupar(dados, chave) {
+      const mapa = {};
+      dados.forEach(v => {
+        const k = v[chave];
+        if (!mapa[k]) mapa[k] = { chave: k, qtd: 0, total: 0 };
+        mapa[k].qtd += 1;
+        mapa[k].total += v.preco;
+      });
+      Object.values(mapa).forEach(g => g.ticket = g.total / g.qtd);
+      return mapa;
+    }
+
+    const soma = (dados) => dados.reduce((acc, v) => acc + v.preco, 0);
+
+    /* ====================== INSTANCIAÇÃO DO CHART.JS ====================== */
+    Chart.defaults.color = '#b5b5b5';
+    Chart.defaults.font.family = "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.borderColor = '#2a2a2a';
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.tooltip.backgroundColor = '#000000';
+    Chart.defaults.plugins.tooltip.borderColor = COLORS.red;
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.padding = 10;
+
+    const baseOpts = { responsive: true, maintainAspectRatio: false };
+
+    // Gráfico 1: Faturamento por modelo (barras horizontais)
+    const chartFaturamento = new Chart(document.getElementById('chart-faturamento'), {
+      type: 'bar',
+      data: { labels: [], datasets: [{ label: 'Faturamento', data: [], backgroundColor: [], borderRadius: 2 }] },
+      options: {
+        ...baseOpts,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` Faturamento: ${brl.format(ctx.parsed.x)}`,
+              afterLabel: ctx => ` Unidades: ${ctx.dataset.qtd[ctx.dataIndex]}`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { callback: v => brlCompact.format(v) }, grid: { color: '#262626' } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Gráfico 2: Ticket médio por modelo (barras horizontais)
+    const chartTicket = new Chart(document.getElementById('chart-ticket'), {
+      type: 'bar',
+      data: { labels: [], datasets: [{ label: 'Ticket médio', data: [], backgroundColor: [], borderRadius: 2 }] },
+      options: {
+        ...baseOpts,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` Ticket médio: ${brl.format(ctx.parsed.x)}` } }
+        },
+        scales: {
+          x: { ticks: { callback: v => brlCompact.format(v) }, grid: { color: '#262626' } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Gráfico 3: Rosca - participação por método de pagamento
+    const chartPagamento = new Chart(document.getElementById('chart-pagamento'), {
+      type: 'doughnut',
+      data: {
+        labels: [],
+        datasets: [{ data: [], backgroundColor: [], borderColor: '#1a1a1a', borderWidth: 3 }]
+      },
+      options: {
+        ...baseOpts,
+        cutout: '62%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const part = total ? ctx.parsed / total : 0;
+                return ` ${ctx.label}: ${ctx.parsed} venda(s) (${pct.format(part)})`;
+              },
+              afterLabel: ctx => ` Faturamento: ${brl.format(ctx.dataset.faturamento[ctx.dataIndex])}`
+            }
+          }
+        }
+      }
+    });
+
+    // Gráfico 4: Barras empilhadas - vendas por estado e método de pagamento
+    const chartEstado = new Chart(document.getElementById('chart-estado'), {
+      type: 'bar',
+      data: { labels: [], datasets: [] },
+      options: {
+        ...baseOpts,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} venda(s)`,
+              footer: items => `Total: ${items.reduce((a, i) => a + i.parsed.y, 0)} venda(s)`
+            }
+          }
+        },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#262626' },
+               title: { display: true, text: 'Veículos vendidos' } }
+        }
+      }
+    });
+
+    // Gráfico 5: Volume (barras) + preço médio (linha) por ano do veículo
+    const chartAno = new Chart(document.getElementById('chart-ano'), {
+      data: {
+        labels: [],
+        datasets: [
+          {
+            type: 'bar', label: 'Volume de vendas', data: [],
+            backgroundColor: COLORS.red, borderRadius: 2, yAxisID: 'y', order: 2
+          },
+          {
+            type: 'line', label: 'Preço médio (R$)', data: [],
+            borderColor: COLORS.gold, backgroundColor: COLORS.gold,
+            pointRadius: 5, pointHoverRadius: 7, tension: 0.25, yAxisID: 'y1', order: 1
+          }
+        ]
+      },
+      options: {
+        ...baseOpts,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.dataset.yAxisID === 'y1'
+                ? ` Preço médio: ${brl.format(ctx.parsed.y)}`
+                : ` Volume: ${ctx.parsed.y} venda(s)`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#262626' },
+               title: { display: true, text: 'Veículos vendidos' } },
+          y1: { position: 'right', grid: { drawOnChartArea: false },
+                ticks: { callback: v => brlCompact.format(v) },
+                title: { display: true, text: 'Preço médio' } }
+        }
+      }
+    });
+
+    /* ====================== ATUALIZAÇÃO DA DASHBOARD ====================== */
+    function atualizarDashboard() {
+      const dados = filtrarVendas();
+      const vazio = dados.length === 0;
+
+      document.getElementById('empty-msg').style.display = vazio ? 'block' : 'none';
+      document.getElementById('charts-area').style.display = vazio ? 'none' : 'grid';
+
+      atualizarKPIs(dados);
+      if (vazio) return;
+
+      atualizarGraficoModelos(dados);
+      atualizarGraficoPagamento(dados);
+      atualizarGraficoEstado(dados);
+      atualizarTabelaEstados(dados);
+      atualizarGraficoAno(dados);
+    }
+
+    /* ---------- KPIs ---------- */
+    function atualizarKPIs(dados) {
+      const total = soma(dados);
+      const qtd = dados.length;
+
+      document.getElementById('kpi-faturamento').textContent = qtd ? brl.format(total) : '—';
+      document.getElementById('kpi-qtd').textContent = qtd ? int.format(qtd) : '0';
+      document.getElementById('kpi-ticket').textContent = qtd ? brl.format(total / qtd) : '—';
+
+      if (qtd) {
+        const porModelo = Object.values(agrupar(dados, 'modelo')).sort((a, b) => b.qtd - a.qtd || b.total - a.total);
+        document.getElementById('kpi-top-modelo').textContent = porModelo[0].chave;
+        document.getElementById('kpi-top-modelo-qtd').textContent =
+          `${porModelo[0].qtd} unidade(s) vendida(s)`;
+      } else {
+        document.getElementById('kpi-top-modelo').textContent = '—';
+        document.getElementById('kpi-top-modelo-qtd').textContent = '—';
+      }
+    }
+
+    /* ---------- Pergunta 1: faturamento e ticket médio ---------- */
+    function atualizarGraficoModelos(dados) {
+      const grupos = Object.values(agrupar(dados, 'modelo'));
+
+      const porFat = [...grupos].sort((a, b) => b.total - a.total);
+      chartFaturamento.data.labels = porFat.map(g => g.chave);
+      chartFaturamento.data.datasets[0].data = porFat.map(g => g.total);
+      chartFaturamento.data.datasets[0].qtd = porFat.map(g => g.qtd);
+      chartFaturamento.data.datasets[0].backgroundColor =
+        porFat.map((_, i) => i === 0 ? COLORS.red : COLORS.graphite);
+      chartFaturamento.update();
+
+      const porTicket = [...grupos].sort((a, b) => b.ticket - a.ticket);
+      chartTicket.data.labels = porTicket.map(g => g.chave);
+      chartTicket.data.datasets[0].data = porTicket.map(g => g.ticket);
+      chartTicket.data.datasets[0].backgroundColor =
+        porTicket.map((_, i) => i === 0 ? COLORS.gold : COLORS.graphite);
+      chartTicket.update();
+
+      document.getElementById('insight-1').innerHTML =
+        `<strong>${porFat[0].chave}</strong> lidera em faturamento total com ` +
+        `<strong>${brl.format(porFat[0].total)}</strong> (${porFat[0].qtd} unidade(s)). ` +
+        `O maior ticket médio é do <strong>${porTicket[0].chave}</strong>, ` +
+        `com <strong>${brl.format(porTicket[0].ticket)}</strong> por veículo.`;
+    }
+
+    /* ---------- Pergunta 2: métodos de pagamento ---------- */
+    function atualizarGraficoPagamento(dados) {
+      const grupos = agrupar(dados, 'metodoPagamento');
+      const lista = PAGAMENTOS.filter(p => grupos[p]);
+
+      chartPagamento.data.labels = lista;
+      chartPagamento.data.datasets[0].data = lista.map(p => grupos[p].qtd);
+      chartPagamento.data.datasets[0].faturamento = lista.map(p => grupos[p].total);
+      chartPagamento.data.datasets[0].backgroundColor = lista.map(p => PAYMENT_COLORS[p]);
+      chartPagamento.update();
+    }
+
+    /* ---------- Pergunta 2: distribuição por estado ---------- */
+    function atualizarGraficoEstado(dados) {
+      const porEstado = Object.values(agrupar(dados, 'estado')).sort((a, b) => b.qtd - a.qtd);
+      const estados = porEstado.map(g => g.chave);
+
+      chartEstado.data.labels = estados;
+      chartEstado.data.datasets = PAGAMENTOS.map(metodo => ({
+        label: metodo,
+        data: estados.map(uf =>
+          dados.filter(v => v.estado === uf && v.metodoPagamento === metodo).length),
+        backgroundColor: PAYMENT_COLORS[metodo],
+        borderRadius: 2
+      }));
+      chartEstado.update();
+    }
+
+    function atualizarTabelaEstados(dados) {
+      const porEstado = Object.values(agrupar(dados, 'estado')).sort((a, b) => b.qtd - a.qtd);
+      const tbody = document.getElementById('tbody-estados');
+
+      const linhas = porEstado.map(g => {
+        const doEstado = dados.filter(v => v.estado === g.chave);
+        const contagem = {};
+        doEstado.forEach(v => contagem[v.metodoPagamento] = (contagem[v.metodoPagamento] || 0) + 1);
+        const [metodo, qtdMetodo] = Object.entries(contagem).sort((a, b) => b[1] - a[1])[0];
+        return { ...g, metodo, share: qtdMetodo / g.qtd };
+      });
+
+      tbody.innerHTML = linhas.map(l => `
+        <tr>
+          <td><strong>${l.chave}</strong></td>
+          <td class="num">${int.format(l.qtd)}</td>
+          <td class="num">${brl.format(l.total)}</td>
+          <td class="num">${brl.format(l.ticket)}</td>
+          <td><span class="badge">${l.metodo}</span></td>
+          <td class="num">${pct.format(l.share)}</td>
+        </tr>`).join('');
+
+      const top = linhas[0];
+      const frase = linhas.length > 1
+        ? `<strong>${top.chave}</strong> concentra o maior volume (${top.qtd} veículos, ` +
+          `${pct.format(top.qtd / dados.length)} do total). ` +
+          `Método preferido em cada Estado: ` +
+          linhas.map(l => `<strong>${l.chave}</strong> → ${l.metodo}`).join(' · ') + '.'
+        : `Todas as vendas filtradas estão em <strong>${top.chave}</strong>, ` +
+          `com preferência por <strong>${top.metodo}</strong> (${pct.format(top.share)}).`;
+      document.getElementById('insight-2').innerHTML = frase;
+    }
+
+    /* ---------- Pergunta 3: ano do veículo ---------- */
+    function atualizarGraficoAno(dados) {
+      const grupos = agrupar(dados, 'ano');
+      const anos = ANOS.filter(a => grupos[a]);
+
+      chartAno.data.labels = anos;
+      chartAno.data.datasets[0].data = anos.map(a => grupos[a].qtd);
+      chartAno.data.datasets[1].data = anos.map(a => grupos[a].ticket);
+      chartAno.update();
+
+      const maisVolume = anos.reduce((m, a) => grupos[a].qtd > grupos[m].qtd ? a : m, anos[0]);
+      let texto = `O ano <strong>${maisVolume}</strong> registra o maior volume ` +
+                  `(${grupos[maisVolume].qtd} venda(s)). `;
+
+      if (anos.length > 1) {
+        const primeiro = anos[0], ultimo = anos[anos.length - 1];
+        const variacao = grupos[ultimo].ticket / grupos[primeiro].ticket - 1;
+        texto += `O preço médio vai de <strong>${brl.format(grupos[primeiro].ticket)}</strong> ` +
+                 `(${primeiro}) para <strong>${brl.format(grupos[ultimo].ticket)}</strong> (${ultimo}), ` +
+                 `uma variação de <strong>${variacao >= 0 ? '+' : ''}${pct.format(variacao)}</strong>. ` +
+                 `Modelos mais novos tendem a ser vendidos por valores mais altos.`;
+      } else {
+        texto += `Preço médio: <strong>${brl.format(grupos[maisVolume].ticket)}</strong>.`;
+      }
+      document.getElementById('insight-3').innerHTML = texto;
+    }
+
+    /* ====================== INICIALIZAÇÃO ====================== */
+    atualizarDashboard();
+  </script>
+</body>
+</html>
